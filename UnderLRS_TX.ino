@@ -1,6 +1,3 @@
-/*This program puts the servo values into an array,
- reagrdless of channel number, polarity, ppm frame length, etc...
- You can even change these while scanning!*/
 #include <SPI.h>
 #include <Wire.h>
 #include <LoRa.h>
