@@ -30,12 +30,16 @@ Adafruit_SSD1306 display(OLED_RESET);
   B01110000, B01110000,
   B00000000, B00110000 };
 */
+#if (SSD1306_LCDHEIGHT != 32)
+#error("Height incorrect, please fix Adafruit_SSD1306.h!");
+#endif
 
 #define PPM_LOST_SENSITIVITY 20
 #define PPM_Pin 3  //this must be 2 or 3
 #define multiplier (F_CPU/8000000)  //leave this alone
 int ppm[16];  //array for storing up to 16 servo signals
 int lost_frames = 0;
+int counter = 0;
 byte servo[] = {1,4,5,6,7,8,9,10};  //pin number of servo output
 //#define servoOut  //comment this if you don't want servo output
 #define DEBUG
@@ -45,10 +49,7 @@ void setup()
   Serial.begin(115200);
   Serial.println("ready");
 
-  #if defined(servoOut)
-  for(byte i=0; sizeof(servo)-1; i++) pinMode(servo[i], OUTPUT);
-  #endif
- 
+
   pinMode(PPM_Pin, INPUT);
   attachInterrupt(digitalPinToInterrupt(PPM_Pin), read_ppm, CHANGE);
 
@@ -68,7 +69,20 @@ void setup()
 
   // Clear the buffer.
   display.clearDisplay();
-
+  
+  LoRa.setPins(10, 9, 2); 
+  LoRa.setTxPower(2);
+ if (!LoRa.begin(433E6)) {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    Serial.println("Starting LoRa failed!");
+    display.setCursor(0,0);
+    display.println("Starting LoRa failed!");
+    display.display();
+    LoRa.dumpRegisters(Serial);
+     while (1);
+  }
 }
 
 void loop()
@@ -77,21 +91,41 @@ void loop()
   if(lost_frames < PPM_LOST_SENSITIVITY ){
     display.clearDisplay();
     display.setTextSize(1);
+    display.setTextColor(WHITE);
     display.setCursor(0,0);
     display.print("Channel 1: "); display.println(ppm[0]);
     display.print("Channel 2: "); display.println(ppm[1]);
     display.print("Channel 3: "); display.println(ppm[2]);
     display.print("Channel 4: "); display.println(ppm[3]);
     display.display();
-    
+    String LoraMessage;
+    LoraMessage = "0x00"+String(ppm[0], HEX) + String(ppm[1], HEX) + String(ppm[2], HEX) + String(ppm[3], HEX);
+    LoRa.beginPacket();
+    LoRa.print(LoraMessage);
+    LoRa.endPacket();
   }else{
     display.clearDisplay();
     display.setTextSize(1);
+    display.setTextColor(WHITE);
     display.setCursor(0,0);
     display.println("NO PPM SIGNAL");
     display.display();
+    Serial.print("NO PPM SIGNAL");
   }
-  delay(50);
+
+  Serial.print("Sending packet: ");
+  Serial.println(counter);
+
+  // send packet
+ // LoRa.beginPacket();
+//  LoRa.print("hello ");
+//  LoRa.print(counter);
+//  LoRa.endPacket();
+
+  counter++;
+
+ 
+//  delay(1000);
 
   //You can delete everithing inside loop() and put your own code here
 /*  int count;
